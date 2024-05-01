@@ -13,7 +13,6 @@ extern "C" {
 }
 
 #define LED_PIN      2   // Connected to D4
-#define BYPASS_PIN   12  // Connected to D6
 
 uint8_t newStack[1024];
 
@@ -59,18 +58,6 @@ void setup() {
 
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
-
-    pinMode(BYPASS_PIN, INPUT);
-
-    if(digitalRead(BYPASS_PIN) == LOW) {
-      while(true) {
-        Serial.println("Standing by");
-        digitalWrite(LED_PIN, LOW);
-        delay(500);
-        digitalWrite(LED_PIN, HIGH);
-        delay(500);
-      }
-    }
 
     RunTask(Task1, newStack);
 }
