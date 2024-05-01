@@ -1,3 +1,5 @@
+#include <map>
+
 extern "C" {
     uint32_t getStackPointer() {
         uint32_t sp;
@@ -14,6 +16,11 @@ extern "C" {
 #define BYPASS_PIN   12  // Connected to D6
 
 uint8_t newStack[1024];
+
+std::map<String, int> dict;
+
+int runningTasks = 0;
+uint32_t runningTaskStacks[10];
 
 void RunTask(void (*taskFunction)(), uint8_t* taskStack) {
     uint32_t oldStack = getStackPointer();
@@ -47,15 +54,14 @@ void Task1() {
 void setup() {
     Serial.begin(115200);
 
+    dict["key1"] = 100;
+    dict["key2"] = 200;
+
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
 
     pinMode(BYPASS_PIN, INPUT);
 
-    RunTask(Task1, newStack);
-}
-
-void loop() {
     if(digitalRead(BYPASS_PIN) == LOW) {
       while(true) {
         Serial.println("Standing by");
@@ -66,6 +72,10 @@ void loop() {
       }
     }
 
+    RunTask(Task1, newStack);
+}
+
+void loop() {
     digitalWrite(LED_PIN, LOW); 
     TaskDelay(200);
     digitalWrite(LED_PIN, HIGH); 
