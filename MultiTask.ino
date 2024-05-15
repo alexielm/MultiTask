@@ -1,4 +1,4 @@
-#include <map>
+#include <Arduino.h>
 
 extern "C" {
     uint32_t getStackPointer() {
@@ -12,59 +12,105 @@ extern "C" {
     }
 }
 
-#define LED_PIN      2   // Connected to D4
+#define LED_PIN 2  // Connected to D4
 
-uint8_t newStack[1024];
+uint8_t newStack1[1024];
+uint8_t newStack2[1024];
 
-std::map<String, int> dict;
+struct Task {
+    bool (*taskFunction)();
+    uint32_t stackPointer;
+};
 
-int runningTasks = 0;
-uint32_t runningTaskStacks[10];
+Task runningTasks[10];
+int taskCount = 1;
+int currentTask = 0;
 
-void RunTask(void (*taskFunction)(), uint8_t* taskStack) {
-    uint32_t oldStack = getStackPointer();
+void RunTask(bool (*taskFunction)(), uint8_t* taskStack) {
+    uint32_t newStackTop = (uint32_t)taskStack + sizeof(newStack1) - 4;
+    
+    newStackTop -= sizeof(uint32_t);
+    *((uint32_t*)newStackTop) = (uint32_t)FirstRun;
 
-    uint32_t newStackTop = (uint32_t)taskStack + sizeof(newStack) - 4; 
-    setStackPointer(newStackTop);
+    runningTasks[taskCount++] = {taskFunction, newStackTop};
+}
 
-    taskFunction();
+void FirstRun() {
+    bool (*taskFunction)() = runningTasks[currentTask].taskFunction;
+    while (taskFunction()) {
+        NextTask();
+    }
 
-    setStackPointer(oldStack);
+    delay(1000);
+    Serial.println("-- Exiting ----");
+    delay(1000);
+
+    for (int i = 0; i < taskCount; ++i) {
+        if (runningTasks[i].taskFunction == taskFunction) {
+            for (int j = i; j < taskCount - 1; ++j) {
+                runningTasks[j] = runningTasks[j + 1];
+            }
+            --taskCount;
+            break;
+        }
+    }
+    Serial.println("-- Removed ----");
+
+    NextTask();
 }
 
 void NextTask() {
-
+    runningTasks[currentTask].stackPointer = getStackPointer();
+    currentTask = (currentTask + 1) % taskCount;
+    uint32_t nextSP = runningTasks[currentTask].stackPointer;
+    setStackPointer(nextSP);
 }
 
 void TaskDelay(unsigned long delay) {
     unsigned long endTime = millis() + delay;
     while (millis() < endTime) {
-        NextTask(); 
+        NextTask();
     }
 }
 
-void Task1() {
-    while(true) {
-      Serial.println("Task1 is executing");
-      TaskDelay(750);
+bool Task1() {
+    while (true) {
+        Serial.print("Task1-");
+        TaskDelay(750);
     }
+    return false;
+}
+
+bool Task2() {
+    Serial.println("Task2-");
+    TaskDelay(500);
+    return true;
 }
 
 void setup() {
     Serial.begin(115200);
-
-    dict["key1"] = 100;
-    dict["key2"] = 200;
+    delay(1000);
+    Serial.println("App started ----------------------");
+    delay(1000);
 
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
 
-    RunTask(Task1, newStack);
+    Serial.println("Adding Tasks");
+    delay(200);
+    RunTask(Task1, newStack1);
+    delay(200);
+    Serial.println("Task1 Added");
+    delay(200);
+    RunTask(Task2, newStack2);
+    delay(200);
+    Serial.println("Task2 Added");
+    delay(200);
 }
 
 void loop() {
-    digitalWrite(LED_PIN, LOW); 
-    TaskDelay(200);
-    digitalWrite(LED_PIN, HIGH); 
-    TaskDelay(200);
+    digitalWrite(LED_PIN, LOW);
+    TaskDelay(400);
+    digitalWrite(LED_PIN, HIGH);
+    TaskDelay(600);
 }
