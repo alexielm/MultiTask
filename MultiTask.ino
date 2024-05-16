@@ -26,16 +26,18 @@ Task runningTasks[10];
 int taskCount = 1;
 int currentTask = 0;
 
-void RunTask(bool (*taskFunction)(), uint8_t* taskStack) {
-    uint32_t newStackTop = (uint32_t)taskStack + sizeof(newStack1) - 4;
-    
-    newStackTop -= sizeof(uint32_t);
+void RunTask(bool (*taskFunction)(), uint8_t* taskStack, int stackSize) {
+    uint32_t newStackTop = (uint32_t)taskStack + stackSize - sizeof(uint32_t);
+
     *((uint32_t*)newStackTop) = (uint32_t)FirstRun;
+    newStackTop -= sizeof(uint32_t) * 3;
 
     runningTasks[taskCount++] = {taskFunction, newStackTop};
 }
 
 void FirstRun() {
+    Serial.println("Enter First Run");
+
     bool (*taskFunction)() = runningTasks[currentTask].taskFunction;
     while (taskFunction()) {
         NextTask();
@@ -75,42 +77,42 @@ void TaskDelay(unsigned long delay) {
 
 bool Task1() {
     while (true) {
-        Serial.print("Task1-");
+        Serial.print(currentTask);
+        Serial.println("-Main");
         TaskDelay(750);
     }
     return false;
 }
 
 bool Task2() {
-    Serial.println("Task2-");
-    TaskDelay(500);
-    return true;
+    while (true) {
+        Serial.print(currentTask);
+        Serial.println("-Sub");
+        TaskDelay(500);
+    }
+    return false;
 }
 
 void setup() {
     Serial.begin(115200);
-    delay(1000);
+    delay(500);
+    Serial.println();
+    Serial.println();
     Serial.println("App started ----------------------");
-    delay(1000);
+    Serial.println();
+    Serial.println();
+    delay(100);
 
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
 
-    Serial.println("Adding Tasks");
-    delay(200);
-    RunTask(Task1, newStack1);
-    delay(200);
-    Serial.println("Task1 Added");
-    delay(200);
-    RunTask(Task2, newStack2);
-    delay(200);
-    Serial.println("Task2 Added");
-    delay(200);
+    RunTask(Task1, newStack1, 1024);
+    RunTask(Task2, newStack2, 1024);
 }
 
 void loop() {
     digitalWrite(LED_PIN, LOW);
     TaskDelay(400);
     digitalWrite(LED_PIN, HIGH);
-    TaskDelay(600);
+    Serial.println("blink HIGH");
 }
