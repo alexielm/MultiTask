@@ -36,6 +36,7 @@ void RunTask(void (*taskFunction)(), uint8_t* taskStack, int stackSize) {
 }
 
 void TerminateCurrentTask() {
+    delay(0);
     for (int i = currentTask; i < taskCount - 1; ++i) {
         runningTasks[i] = runningTasks[i + 1];
     }
@@ -43,9 +44,9 @@ void TerminateCurrentTask() {
     if(currentTask == taskCount) {
       currentTask = 0;
     }
+    delay(0);
     uint32_t nextSP = runningTasks[currentTask].stackPointer;
     setStackPointer(nextSP);
-    Serial.print("stack changed: ");
 }
 
 void FirstRun() {
@@ -71,23 +72,25 @@ void TaskDelay(unsigned long delay) {
 
 void Task1() {
     while (true) {
-        Serial.println("-Main");
+        Serial.println("Main");
         TaskDelay(1000);
     }
 }
 
 void Task2() {
     for(int i = 0; i < 5; i++) {
+        Serial.print(i);
         Serial.println("Sub");
-        TaskDelay(1725);
+        TaskDelay(275);
     }
 }
 
 void setup() {
     Serial.begin(115200);
-    delay(500);
+    delay(1000);
     Serial.println();
     Serial.println("App started ----------------------");
+    delay(500);
 
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
