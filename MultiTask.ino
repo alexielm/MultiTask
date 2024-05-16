@@ -14,9 +14,6 @@ extern "C" {
 
 #define LED_PIN 2  // Connected to D4
 
-uint8_t newStack1[1024];
-uint8_t newStack2[1024];
-
 struct Task {
     void (*taskFunction)();
     uint32_t stackPointer;
@@ -70,6 +67,7 @@ void TaskDelay(unsigned long delay) {
     }
 }
 
+uint8_t newStack1[1024];
 void Task1() {
     while (true) {
         Serial.println("Main");
@@ -77,6 +75,7 @@ void Task1() {
     }
 }
 
+uint8_t newStack2[1024];
 void Task2() {
     for(int i = 0; i < 5; i++) {
         Serial.print(i);
