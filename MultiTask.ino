@@ -18,7 +18,7 @@ uint8_t newStack1[1024];
 uint8_t newStack2[1024];
 
 struct Task {
-    bool (*taskFunction)();
+    void (*taskFunction)();
     uint32_t stackPointer;
 };
 
@@ -26,7 +26,7 @@ Task runningTasks[10];
 int taskCount = 1;
 int currentTask = 0;
 
-void RunTask(bool (*taskFunction)(), uint8_t* taskStack, int stackSize) {
+void RunTask(void (*taskFunction)(), uint8_t* taskStack, int stackSize) {
     uint32_t newStackTop = (uint32_t)taskStack + stackSize - sizeof(uint32_t);
 
     *((uint32_t*)newStackTop) = (uint32_t)FirstRun;
@@ -35,30 +35,24 @@ void RunTask(bool (*taskFunction)(), uint8_t* taskStack, int stackSize) {
     runningTasks[taskCount++] = {taskFunction, newStackTop};
 }
 
+void TerminateCurrentTask() {
+    for (int i = currentTask; i < taskCount - 1; ++i) {
+        runningTasks[i] = runningTasks[i + 1];
+    }
+    --taskCount;
+    if(currentTask == taskCount) {
+      currentTask = 0;
+    }
+    uint32_t nextSP = runningTasks[currentTask].stackPointer;
+    setStackPointer(nextSP);
+    Serial.print("stack changed: ");
+}
+
 void FirstRun() {
-    Serial.println("Enter First Run");
-
-    bool (*taskFunction)() = runningTasks[currentTask].taskFunction;
-    while (taskFunction()) {
-        NextTask();
-    }
-
-    delay(1000);
-    Serial.println("-- Exiting ----");
-    delay(1000);
-
-    for (int i = 0; i < taskCount; ++i) {
-        if (runningTasks[i].taskFunction == taskFunction) {
-            for (int j = i; j < taskCount - 1; ++j) {
-                runningTasks[j] = runningTasks[j + 1];
-            }
-            --taskCount;
-            break;
-        }
-    }
-    Serial.println("-- Removed ----");
-
+    void (*taskFunction)() = runningTasks[currentTask].taskFunction;
+    taskFunction();
     NextTask();
+    TerminateCurrentTask();
 }
 
 void NextTask() {
@@ -75,44 +69,36 @@ void TaskDelay(unsigned long delay) {
     }
 }
 
-bool Task1() {
+void Task1() {
     while (true) {
-        Serial.print(currentTask);
         Serial.println("-Main");
-        TaskDelay(750);
+        TaskDelay(1000);
     }
-    return false;
 }
 
-bool Task2() {
-    while (true) {
-        Serial.print(currentTask);
-        Serial.println("-Sub");
-        TaskDelay(500);
+void Task2() {
+    for(int i = 0; i < 5; i++) {
+        Serial.println("Sub");
+        TaskDelay(1725);
     }
-    return false;
 }
 
 void setup() {
     Serial.begin(115200);
     delay(500);
     Serial.println();
-    Serial.println();
     Serial.println("App started ----------------------");
-    Serial.println();
-    Serial.println();
-    delay(100);
 
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
 
-    RunTask(Task1, newStack1, 1024);
-    RunTask(Task2, newStack2, 1024);
+    RunTask(Task1, newStack1, sizeof(newStack1));
+    RunTask(Task2, newStack2, sizeof(newStack2));
 }
 
 void loop() {
     digitalWrite(LED_PIN, LOW);
     TaskDelay(400);
     digitalWrite(LED_PIN, HIGH);
-    Serial.println("blink HIGH");
+    TaskDelay(600);
 }
